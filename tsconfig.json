@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2018",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "*": [
+        "node_modules/*",
+      ],
+      "types/*": [
+        "types/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "client/**/*",
+    "types/*",
+    "test/**/*"
+  ]
+}

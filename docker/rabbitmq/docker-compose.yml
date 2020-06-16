@@ -1,0 +1,18 @@
+version: '3.7'
+
+networks:
+  fly-net:
+    external: true
+
+services:
+  main:
+    image: rabbitmq:3.8.3
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: root
+    networks:
+      fly-net:
+        ipv4_address: 192.168.1.100
+    ports:
+      - 5672:5672
+      - 15672:15672

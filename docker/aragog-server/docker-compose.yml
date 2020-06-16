@@ -1,0 +1,15 @@
+version: '3.7'
+
+networks:
+  fly-net:
+    external: true
+
+services:
+  main:
+    build: .
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./data:/root/app/data
+    networks:
+      - fly-net
