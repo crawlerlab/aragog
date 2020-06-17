@@ -1,5 +1,10 @@
 # Aragog
 
+[![Build Status](https://img.shields.io/travis/crawlerlab/aragog/master?style=flat-square)](https://travis-ci.com/crawlerlab/aragog)
+[![Codecov Coverage](https://img.shields.io/codecov/c/github/crawlerlab/aragog/master?style=flat-square)](https://codecov.io/gh/crawlerlab/aragog)
+[![NPM Version](https://img.shields.io/npm/v/aragog-client?style=flat-square)](https://www.npmjs.com/package/aragog-client)
+[![License](https://img.shields.io/github/license/crawlerlab/aragog?style=flat-square)](https://github.com/crawlerlab/aragog/blob/master/LICENSE)
+
 Aragog 是一个双模式的分布式爬虫框架
 
 ## 系统架构
@@ -45,7 +50,7 @@ Aragog 是一个双模式的分布式爬虫框架
       1. 一键拷贝相关文件到 Docker 目录
 
          ```bash
-           yarn initdocker
+           yarn init-docker
          ```
 
       1. 根据实际情况分别修改 aragog-server 和 rabbitmq 文件夹中的 docker-compose.yml (如网络配置、rabbitmq 用户名密码等)

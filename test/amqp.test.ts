@@ -138,8 +138,10 @@ describe('AMQP', () => {
   })
 
   it('优先级队列', async () => {
-    const { client, server, dispose } = await getConnPair()
-
+    const queue = getRandomID()
+    const exchange = getRandomID()
+    const clientConn = await createConnection()
+    const client = await createClient(clientConn, { queue, exchange })
     /* eslint-disable no-restricted-syntax, no-await-in-loop */
     for (const i of [5, 7, 2, 8, 3, 9, 1, 4, 6]) {
       const sendData = getRandomClientData({ url: i.toString() })
@@ -149,15 +151,22 @@ describe('AMQP', () => {
         ...sendData,
       })
     }
+    await wait(100)
+    await clientConn.close()
 
+    const serverConn = await createConnection()
+    const server = await createServer(serverConn, { queue, exchange })
     const serverMock = jest.fn(async () => {
       await wait(100)
       return getRandomServerData()
     })
     const serverErrMock = jest.fn()
     server.onData(serverMock, serverErrMock)
-
     await wait(2000)
+    await serverConn.close()
+
+    await managementApi.deleteQueue(queue)
+    await managementApi.deleteExchange(exchange)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(serverMock.mock.calls.map((d: any) => d[0] && d[0].url)).toEqual(
       new Array(9)
@@ -166,7 +175,6 @@ describe('AMQP', () => {
         .reverse() // ['9', '8', ..., '1']
     )
     expect(serverErrMock).not.toHaveBeenCalled()
-    await dispose()
   })
 
   it('正常错误消息处理', async () => {

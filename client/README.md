@@ -1,5 +1,9 @@
 # Aragog Client
 
+[![Build Status](https://img.shields.io/travis/crawlerlab/aragog/master?style=flat-square)](https://travis-ci.com/crawlerlab/aragog)
+[![NPM Version](https://img.shields.io/npm/v/aragog-client?style=flat-square)](https://www.npmjs.com/package/aragog-client)
+[![License](https://img.shields.io/github/license/crawlerlab/aragog?style=flat-square)](https://github.com/crawlerlab/aragog/blob/master/LICENSE)
+
 Aragog Client 是一个双模式的分布式爬虫框架的 NodeJS 客户端, 用于派发爬虫任务, 并接收抓取结果
 需配合 Aragog 服务端使用 ([Github][aragog-github])
 
