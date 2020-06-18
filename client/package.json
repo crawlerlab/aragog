@@ -1,6 +1,6 @@
 {
   "name": "aragog-client",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Aragog web scraping framework client",
   "keywords": [
     "scraping",
