@@ -1,21 +1,32 @@
 {
   "name": "aragog-client",
   "version": "0.1.1",
-  "description": "Aragog web crawler framework client",
+  "description": "Aragog web scraping framework client",
   "keywords": [
+    "scraping",
+    "crawling",
     "crawler",
     "spider",
-    "aragog"
+    "distributed",
+    "amqp",
+    "framework"
   ],
+  "homepage": "https://github.com/crawlerlab/aragog/tree/master/client",
   "repository": {
     "type": "git",
     "url": "https://github.com/crawlerlab/aragog.git",
     "directory": "client"
   },
-  "main": "./build/index.js",
-  "types": "./build/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "author": "Fei Liu",
   "license": "MIT",
+  "scripts": {
+    "prepublishOnly": "ls lib"
+  },
   "dependencies": {
     "amqplib": "^0.5.6",
     "axios": "^0.19.2"

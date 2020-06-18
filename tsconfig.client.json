@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig",
   "compilerOptions": {
-    "outDir": "client/build"
+    "outDir": "client/lib"
   },
   "exclude": [
     "src",

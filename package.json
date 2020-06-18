@@ -1,14 +1,14 @@
 {
   "name": "aragog",
   "version": "0.1.0",
-  "description": "Web crawler framework",
+  "description": "Distributed web scraping framework",
   "author": "Fei Liu",
   "license": "MIT",
   "scripts": {
     "dev": "nodemon --watch src --exec node --inspect -r ts-node/register ./src/main.ts",
     "build": "rimraf dist && tsc -p tsconfig.server.json && cp src/headless/jquery*.js dist/headless",
     "init-docker": "rimraf docker/aragog-server/package.json docker/aragog-server/yarn.lock docker/aragog-server/dist && cp -r dist package.json yarn.lock docker/aragog-server",
-    "build:client": "rimraf client/build && tsc -d -p tsconfig.client.json",
+    "build:client": "rimraf client/lib && tsc -d -p tsconfig.client.json",
     "server": "node dist/main.js",
     "lint": "tsc --noEmit -p tsconfig.server.json && tsc --noEmit -p tsconfig.client.json && eslint --ext .ts ./src ./client ./test",
     "test": "jest --verbose --runInBand --detectOpenHandles --forceExit",
