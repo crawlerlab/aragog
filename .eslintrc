@@ -3,16 +3,14 @@
   "parserOptions": {
     "project": "./tsconfig.json"
   },
-  "plugins": [
-    "@typescript-eslint",
-    "jest"
-  ],
+  "plugins": ["@typescript-eslint", "prettier", "jest"],
   "extends": [
-    "airbnb-typescript/base",
     "plugin:@typescript-eslint/recommended",
     "plugin:jest/recommended",
-    "prettier",
-    "prettier/@typescript-eslint"
+    "airbnb-typescript/base",
+    "prettier/@typescript-eslint",
+    "plugin:prettier/recommended",
+    "prettier/standard"
   ],
   "env": {
     "node": true,
