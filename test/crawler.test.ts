@@ -5,14 +5,6 @@ import { Task, QueueResult } from 'types/amqp'
 import HttpServer from './utils/http-server'
 import mockConfig, { Config } from '../src/config'
 
-type RunTaskFn = (task: Task) => Promise<QueueResult>
-
-const PORT = 6060
-const SERVER_URL = `http://localhost:${PORT}`
-const GUI_MODE = process.env.SHOW_GUI === 'true'
-
-const getRandomID = (): string => Math.random().toString(36).substr(2)
-
 jest.mock('../src/config', () => {
   const { default: actualConfig, ...otherExports } = jest.requireActual<{ default: Config }>(
     '../src/config'
@@ -39,6 +31,14 @@ jest.mock('../src/config', () => {
     ...otherExports,
   }
 })
+
+type RunTaskFn = (task: Task) => Promise<QueueResult>
+const PORT = 6060
+const SERVER_URL = `http://localhost:${PORT}`
+const GUI_MODE = process.env.SHOW_GUI === 'true'
+
+const getRandomID = (): string => Math.random().toString(36).substr(2)
+const wait = (time: number): Promise<void> => new Promise((r) => setTimeout(r, time))
 
 let server: HttpServer
 let browser: puppeteer.Browser
@@ -69,9 +69,11 @@ describe.each([
   ['source', mockConfig.source],
 ])('%s', (n, config) => {
   const name = n as 'headless' | 'source'
+  let mockedPuppeteer: typeof puppeteer
   let runTask: RunTaskFn
 
   beforeAll(async () => {
+    mockedPuppeteer = (await import('puppeteer')).default
     if (name === 'headless') {
       runTask = (await import('../src/headless')).default
     } else {
@@ -491,4 +493,49 @@ describe.each([
     expect(result.errorCode).toEqual(4002)
     expect(result.errorMsg).toMatch('$(...).noFun is not a function')
   })
+
+  if (name === 'headless') {
+    it('浏览器闲置时关闭', async () => {
+      const path = getRandomID()
+      server.on(path, (req, res) => {
+        res.html('')
+      })
+
+      const CLOSE_TIMEOUT_MS = 5 * 60 * 1000
+      const closeSpy = jest.spyOn(browser, 'close').mockResolvedValue()
+      const mockedLaunch = mockedPuppeteer.launch as jest.Mock
+
+      jest.useFakeTimers()
+      await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: '',
+      })
+      expect(jest.getTimerCount()).toBe(1)
+      jest.advanceTimersByTime(CLOSE_TIMEOUT_MS - 1000)
+      await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: '',
+      })
+      expect(jest.getTimerCount()).toBe(1)
+      jest.advanceTimersByTime(CLOSE_TIMEOUT_MS - 1000)
+      expect(browser.close).not.toBeCalled()
+      expect(mockedLaunch).toBeCalledTimes(1)
+
+      jest.advanceTimersByTime(CLOSE_TIMEOUT_MS)
+
+      jest.useRealTimers()
+      await wait(1000)
+      await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: '',
+      })
+      expect(browser.close).toBeCalledTimes(1)
+      expect(mockedLaunch).toBeCalledTimes(2)
+
+      closeSpy.mockRestore()
+    })
+  }
 })

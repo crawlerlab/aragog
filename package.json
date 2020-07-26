@@ -11,7 +11,7 @@
     "build:client": "rimraf client/lib && tsc -d -p tsconfig.client.json && node script/after-client-build.js",
     "server": "node dist/main.js",
     "lint": "tsc --noEmit -p tsconfig.server.json && tsc --noEmit -p tsconfig.client.json && eslint --ext .ts ./src ./client ./test",
-    "test": "jest --verbose",
+    "test": "jest --verbose --forceExit",
     "test:cov": "yarn test --coverage",
     "upload-cov": "codecov --disable=gcov"
   },
