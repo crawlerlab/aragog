@@ -95,13 +95,13 @@ const createPage = async (browser: puppeteer.Browser, task: Task): Promise<puppe
   return page
 }
 
-const runTask = async (task: Task, customBrowser?: puppeteer.Browser): Promise<QueueResult> => {
+const runTask = async (task: Task): Promise<QueueResult> => {
   let page: puppeteer.Page | null = null
   const startTime = Date.now()
   const log = logPrefix(headlessLog, task.taskId)
   log.info('---------- RUN TASK ----------')
   try {
-    const browser = customBrowser || (await initBrowser())
+    const browser = await initBrowser()
     const pages = await browser.pages()
     const pagesInfo = await Promise.all(
       pages.map(async (pageItem) => ({

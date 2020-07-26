@@ -1,10 +1,11 @@
 import url from 'url'
 import iconv from 'iconv-lite'
 import puppeteer from 'puppeteer'
+import { Task, QueueResult } from 'types/amqp'
 import HttpServer from './utils/http-server'
 import mockConfig, { Config } from '../src/config'
-import runHeadlessTask from '../src/headless'
-import runSourceTask from '../src/source'
+
+type RunTaskFn = (task: Task) => Promise<QueueResult>
 
 const PORT = 6060
 const SERVER_URL = `http://localhost:${PORT}`
@@ -13,16 +14,20 @@ const GUI_MODE = process.env.SHOW_GUI === 'true'
 const getRandomID = (): string => Math.random().toString(36).substr(2)
 
 jest.mock('../src/config', () => {
-  const { default: actualConfig, ...otherExports } = jest.requireActual('../src/config')
+  const { default: actualConfig, ...otherExports } = jest.requireActual<{ default: Config }>(
+    '../src/config'
+  )
   const cfg: Partial<Config> = {
     ...actualConfig,
     headless: {
+      ...actualConfig.headless,
       browserCloseTimeout: 5 * 60,
       defaultLoadTimeout: 60,
       retries: 3,
       userAgent: 'Test/Headless',
     },
     source: {
+      ...actualConfig.source,
       defaultLoadTimeout: 30,
       retries: 3,
       userAgent: 'Test/Source',
@@ -35,18 +40,43 @@ jest.mock('../src/config', () => {
   }
 })
 
+let server: HttpServer
+let browser: puppeteer.Browser
+
+beforeAll(async () => {
+  server = new HttpServer()
+  await server.start(PORT)
+  browser = await puppeteer.launch({ devtools: GUI_MODE })
+  jest.doMock('puppeteer', () => {
+    return {
+      __esModule: true,
+      default: {
+        ...puppeteer,
+        launch: jest.fn().mockResolvedValue(browser),
+      },
+    }
+  })
+})
+
+afterAll(async () => {
+  await browser.close()
+  await server.close()
+})
+
 jest.setTimeout(30000)
 describe.each([
-  ['headless', runHeadlessTask, mockConfig.headless],
-  ['source', runSourceTask, mockConfig.source],
-])('%s', (name, runTask, config) => {
-  let server: HttpServer
-  let browser: puppeteer.Browser
+  ['headless', mockConfig.headless],
+  ['source', mockConfig.source],
+])('%s', (n, config) => {
+  const name = n as 'headless' | 'source'
+  let runTask: RunTaskFn
 
   beforeAll(async () => {
-    server = new HttpServer()
-    await server.start(PORT)
-    browser = await puppeteer.launch({ devtools: GUI_MODE })
+    if (name === 'headless') {
+      runTask = (await import('../src/headless')).default
+    } else {
+      runTask = (await import('../src/source')).default
+    }
   })
 
   it('基础功能', async () => {
@@ -61,14 +91,11 @@ describe.each([
       )
     })
 
-    const result = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `Array.from($('#list').children().map((i,d) => $(d).text()))`,
-      },
-      browser
-    )
+    const result = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `Array.from($('#list').children().map((i,d) => $(d).text()))`,
+    })
     expect(result.data).toEqual(['a', 'b', 'c'])
     expect(result.startTime).toEqual(expect.any(Number))
     expect(result.endTime).toEqual(expect.any(Number))
@@ -90,14 +117,11 @@ describe.each([
       )
     })
 
-    const result = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').text()`,
-      },
-      browser
-    )
+    const result = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').text()`,
+    })
     expect(result.data).toEqual('ok')
   })
 
@@ -109,14 +133,11 @@ describe.each([
     })
     server.on(path, mockListener)
 
-    const result = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-      },
-      browser
-    )
+    const result = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+    })
     expect(mockListener).toHaveBeenCalledTimes(1)
     expect(result.errorCode).toEqual(4001)
     expect(result.errorMsg).toEqual('page status code is 404')
@@ -127,15 +148,12 @@ describe.each([
     const mockListener = jest.fn()
     server.on(path, mockListener)
 
-    const result = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-        timeout: 1, // 1s
-      },
-      browser
-    )
+    const result = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+      timeout: 1, // 1s
+    })
     expect(mockListener).toHaveBeenCalledTimes(config.retries + 1)
     expect(result.errorCode).toEqual(4001)
     expect(result.errorMsg).toMatch(/timeout of 1000\s?ms exceeded/)
@@ -158,14 +176,11 @@ describe.each([
       })
       server.on(path, mockListener)
 
-      await runTask(
-        {
-          taskId: path,
-          url: `${SERVER_URL}/${path}`,
-          script: '',
-        },
-        browser
-      )
+      await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: '',
+      })
       const expectImages = expect.arrayContaining([
         `/${path}/img1.png`,
         `/${path}/img2.jpg`,
@@ -177,15 +192,12 @@ describe.each([
 
       // 禁用图片
       mockListener.mockClear()
-      await runTask(
-        {
-          taskId: path,
-          url: `${SERVER_URL}/${path}`,
-          script: '',
-          disableImage: true,
-        },
-        browser
-      )
+      await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: '',
+        disableImage: true,
+      })
       expect(mockListener.mock.calls.map(([req]) => req.url)).not.toEqual(expectImages)
     })
   }
@@ -210,14 +222,11 @@ describe.each([
         res.end(iconv.encode(html, 'gbk'))
       })
 
-      const result = await runTask(
-        {
-          taskId: path,
-          url: `${SERVER_URL}/${path}`,
-          script: `$('#data').text()`,
-        },
-        browser
-      )
+      const result = await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: `$('#data').text()`,
+      })
       expect(result.data).toEqual('中文编码')
     })
 
@@ -239,25 +248,19 @@ describe.each([
         res.end(iconv.encode(html, 'gbk'))
       })
 
-      const resultBad = await runTask(
-        {
-          taskId: path,
-          url: `${SERVER_URL}/${path}`,
-          script: `$('#data').text()`,
-        },
-        browser
-      )
+      const resultBad = await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: `$('#data').text()`,
+      })
       expect(resultBad.data).not.toEqual('中文编码')
 
-      const result = await runTask(
-        {
-          taskId: path,
-          url: `${SERVER_URL}/${path}`,
-          script: `$('#data').text()`,
-          encoding: 'gbk',
-        },
-        browser
-      )
+      const result = await runTask({
+        taskId: path,
+        url: `${SERVER_URL}/${path}`,
+        script: `$('#data').text()`,
+        encoding: 'gbk',
+      })
       expect(result.data).toEqual('中文编码')
     })
   }
@@ -274,31 +277,25 @@ describe.each([
       })
     })
     // Object
-    const objRes = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').text()`,
-        method: 'POST',
-        data: {
-          a: 'da',
-          b: 'db',
-        },
+    const objRes = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').text()`,
+      method: 'POST',
+      data: {
+        a: 'da',
+        b: 'db',
       },
-      browser
-    )
+    })
     expect(objRes.data).toEqual('a=da&b=db')
     //  String
-    const stringRes = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').text()`,
-        method: 'POST',
-        data: 'post-data',
-      },
-      browser
-    )
+    const stringRes = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').text()`,
+      method: 'POST',
+      data: 'post-data',
+    })
     expect(stringRes.data).toEqual('post-data')
   })
 
@@ -317,33 +314,27 @@ describe.each([
       }
     })
 
-    const resultDenied = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').text()`,
-        auth: {
-          username: 'wrong',
-          password: 'wrong',
-        },
+    const resultDenied = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').text()`,
+      auth: {
+        username: 'wrong',
+        password: 'wrong',
       },
-      browser
-    )
+    })
     expect(resultDenied.errorCode).toEqual(4001)
     expect(resultDenied.errorMsg).toEqual('page status code is 401')
 
-    const resultOk = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').text()`,
-        auth: {
-          username: 'user',
-          password: 'pass',
-        },
+    const resultOk = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').text()`,
+      auth: {
+        username: 'user',
+        password: 'pass',
       },
-      browser
-    )
+    })
     expect(resultOk.data).toEqual('auth ok')
   })
 
@@ -358,15 +349,12 @@ describe.each([
       a: 'da',
       b: 'db',
     }
-    const result = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').text()`,
-        params,
-      },
-      browser
-    )
+    const result = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').text()`,
+      params,
+    })
     expect(result.data).toEqual(JSON.stringify(params))
   })
 
@@ -377,14 +365,11 @@ describe.each([
     })
     server.on(path, mockListener)
 
-    await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-      },
-      browser
-    )
+    await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+    })
     expect(mockListener.mock.calls.map(([req]) => req.headers)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -406,15 +391,12 @@ describe.each([
       cookie: 'name=value',
       referer: 'https://abc.com/',
     }
-    await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-        headers,
-      },
-      browser
-    )
+    await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+      headers,
+    })
     expect(mockListener.mock.calls.map(([req]) => req.headers)).toEqual(
       expect.arrayContaining([expect.objectContaining(headers)])
     )
@@ -427,30 +409,27 @@ describe.each([
     })
     server.on(path, mockListener)
 
-    await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-        cookies: [
-          {
-            name: 'nck1',
-            value: 'vck1',
-            domain: `localhost:${PORT}`,
-            path: `/${path}`,
-            expires: new Date('2021/01/01').valueOf(),
-            httpOnly: true,
-            secure: false,
-          },
-          {
-            name: 'nck2',
-            value: 'vck2',
-            domain: `localhost:${PORT}`,
-          },
-        ],
-      },
-      browser
-    )
+    await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+      cookies: [
+        {
+          name: 'nck1',
+          value: 'vck1',
+          domain: `localhost:${PORT}`,
+          path: `/${path}`,
+          expires: new Date('2021/01/01').valueOf(),
+          httpOnly: true,
+          secure: false,
+        },
+        {
+          name: 'nck2',
+          value: 'vck2',
+          domain: `localhost:${PORT}`,
+        },
+      ],
+    })
     expect(mockListener.mock.calls.map(([req]) => req.headers)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -471,15 +450,12 @@ describe.each([
       res.html('')
     })
 
-    const resultAll = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-        requireHeaders: true,
-      },
-      browser
-    )
+    const resultAll = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+      requireHeaders: true,
+    })
     expect(resultAll.headers).toEqual(
       expect.objectContaining({
         'set-cookie': 'name=value; path=/',
@@ -488,15 +464,12 @@ describe.each([
       })
     )
 
-    const resultPart = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: '',
-        requireHeaders: ['set-cookie', 'Cache-Control'],
-      },
-      browser
-    )
+    const resultPart = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: '',
+      requireHeaders: ['set-cookie', 'Cache-Control'],
+    })
     expect(resultPart.headers).toEqual({
       'set-cookie': 'name=value; path=/',
       'cache-control': 'public, max-age=2592000',
@@ -509,21 +482,13 @@ describe.each([
       res.html(`<div id="data">ok</div>`)
     })
 
-    const result = await runTask(
-      {
-        taskId: path,
-        url: `${SERVER_URL}/${path}`,
-        script: `$('#data').noFun()`,
-      },
-      browser
-    )
+    const result = await runTask({
+      taskId: path,
+      url: `${SERVER_URL}/${path}`,
+      script: `$('#data').noFun()`,
+    })
     expect(result).not.toHaveProperty('data')
     expect(result.errorCode).toEqual(4002)
     expect(result.errorMsg).toMatch('$(...).noFun is not a function')
-  })
-
-  afterAll(async () => {
-    await server.close()
-    await browser.close()
   })
 })
