@@ -1,6 +1,7 @@
-import { AmqpConn, QueueItem, Cookie } from 'types/amqp'
+import { AmqpConn, Cookie } from 'types/amqp'
+import { SendData } from './amqp'
 
-export const checkTaskInput = (data: QueueItem & { id: string }): void => {
+export const checkTaskInput = (data: SendData & { id: string }): void => {
   const allKeys: Array<keyof typeof data> = [
     'id',
     'url',

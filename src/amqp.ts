@@ -18,14 +18,26 @@ class Amqp {
 
   private async init(): Promise<amqp.Channel> {
     const { queue, exchange, prefetch } = this.param
+    const log = logPrefix(amqpLog, `[${queue}]`)
+    log.debug('create channel...')
     const channel = await this.connection.createChannel()
+    log.debug('assert exchange...')
     await channel.assertExchange(exchange, 'topic')
+    log.debug('assert queue...')
     const dataQueue = await channel.assertQueue(queue, {
       durable: true,
       maxPriority: 10,
     })
-    await channel.bindQueue(dataQueue.queue, exchange, `#.${queue}`)
+    const key = `#.${queue}`
+    log.debug('bind queue...\n', {
+      queue: dataQueue.queue,
+      exchange,
+      key,
+    })
+    await channel.bindQueue(dataQueue.queue, exchange, key)
+    log.debug('prefetch:', prefetch)
     channel.prefetch(prefetch)
+    log.debug(`init done`)
     return channel
   }
 
@@ -33,15 +45,17 @@ class Amqp {
     callback: (data: Task) => Promise<QueueResult>,
     onError: (error: Error) => Promise<void> | void
   ): Promise<void> {
-    const log = logPrefix(amqpLog, this.param.queue)
     const channel = await this.init()
-    log.debug(`init done`)
     channel.consume(this.param.queue, async (msg) => {
       if (msg) {
         try {
           const { correlationId, replyTo } = msg.properties
           const data: QueueItem = JSON.parse(msg.content.toString())
-          log.info(`[${correlationId}] received\n`, data)
+          const log = logPrefix(
+            amqpLog,
+            `[${this.param.queue}] [${data.appName}] [${correlationId}]`
+          )
+          log.info(`received:\n`, data)
           let result: QueueResult
           try {
             result = await callback({
@@ -50,18 +64,18 @@ class Amqp {
             })
           } catch (error) {
             channel.reject(msg)
-            log.error(`[${correlationId}] callback execution failed`)
+            log.error(`callback execution failed:`, error)
             onError(error)
             return
           }
-          log.info(`[${correlationId}] reply to ${replyTo}:\n`, result)
+          log.info(`reply to ${replyTo}:\n`, result)
           await channel.sendToQueue(replyTo, Buffer.from(JSON.stringify(result)), {
             correlationId,
           })
-          log.debug(`[${correlationId}] send success`)
+          log.debug(`reply success`)
           channel.ack(msg)
         } catch (error) {
-          log.error(`failed to send`, error)
+          amqpLog.error(`[${this.param.queue}] failed to send:`, error)
           channel.reject(msg)
         }
       }

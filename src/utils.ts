@@ -107,7 +107,7 @@ export const logPrefix = (logger: Logger, tag: string): Logger =>
   new Proxy(logger, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get: (obj, prop: 'debug' | 'info' | 'warn' | 'error') => (...args: any[]): void =>
-      obj[prop](`[${tag}]`, ...args),
+      obj[prop](tag, ...args),
   })
 
 export const filterObject = (

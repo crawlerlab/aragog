@@ -59,6 +59,7 @@ const random = (min: number, max: number) => Math.floor(Math.random() * (max - m
 export const getRandomClientData = (data: Partial<QueueItem> = {}): QueueItem => {
   const id = getRandomID()
   return {
+    appName: 'test',
     url: `url:${id}`,
     script: `script:${id}`,
     encoding: `encoding:${id}`,

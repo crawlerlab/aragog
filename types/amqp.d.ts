@@ -10,6 +10,7 @@ export interface Cookie {
 }
 
 export interface QueueItem {
+  appName: string
   url: string
   script: string
   disableImage?: boolean

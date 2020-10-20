@@ -14,8 +14,8 @@ interface Options {
   exchangeName?: string
 }
 
-interface TaskCompletedCallback {
-  (error: Error | undefined, data: ResultData): void | Promise<void>
+interface TaskCompletedCallback<T> {
+  (error: Error | undefined, data: ResultData<T>): void | Promise<void>
 }
 
 const taskTypeNotFoundError = (): void => {
@@ -51,7 +51,7 @@ class Aragog {
     }
   }
 
-  public onTaskCompleted(callback: TaskCompletedCallback): void {
+  public onTaskCompleted<T>(callback: TaskCompletedCallback<T>): void {
     if (this.isClosed) {
       connectionClosedError()
     }
@@ -119,4 +119,5 @@ const connect = async (
   )
 }
 
+export type AragogClient = InstanceType<typeof Aragog>
 export { connect, SendData as Task, ResultData as TaskResult, QueueInfo, ConsumerInfo }

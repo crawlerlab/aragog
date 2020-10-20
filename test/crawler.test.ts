@@ -69,6 +69,7 @@ describe.each([
   ['source', mockConfig.source],
 ])('%s', (n, config) => {
   const name = n as 'headless' | 'source'
+  const appName = `${name}-crawler-test`
   let mockedPuppeteer: typeof puppeteer
   let runTask: RunTaskFn
 
@@ -94,6 +95,7 @@ describe.each([
     })
 
     const result = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `Array.from($('#list').children().map((i,d) => $(d).text()))`,
@@ -120,6 +122,7 @@ describe.each([
     })
 
     const result = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').text()`,
@@ -136,6 +139,7 @@ describe.each([
     server.on(path, mockListener)
 
     const result = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -151,6 +155,7 @@ describe.each([
     server.on(path, mockListener)
 
     const result = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -179,6 +184,7 @@ describe.each([
       server.on(path, mockListener)
 
       await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: '',
@@ -195,6 +201,7 @@ describe.each([
       // 禁用图片
       mockListener.mockClear()
       await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: '',
@@ -225,6 +232,7 @@ describe.each([
       })
 
       const result = await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: `$('#data').text()`,
@@ -251,6 +259,7 @@ describe.each([
       })
 
       const resultBad = await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: `$('#data').text()`,
@@ -258,6 +267,7 @@ describe.each([
       expect(resultBad.data).not.toEqual('中文编码')
 
       const result = await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: `$('#data').text()`,
@@ -280,6 +290,7 @@ describe.each([
     })
     // Object
     const objRes = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').text()`,
@@ -292,6 +303,7 @@ describe.each([
     expect(objRes.data).toEqual('a=da&b=db')
     //  String
     const stringRes = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').text()`,
@@ -317,6 +329,7 @@ describe.each([
     })
 
     const resultDenied = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').text()`,
@@ -329,6 +342,7 @@ describe.each([
     expect(resultDenied.errorMsg).toEqual('page status code is 401')
 
     const resultOk = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').text()`,
@@ -352,6 +366,7 @@ describe.each([
       b: 'db',
     }
     const result = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').text()`,
@@ -368,6 +383,7 @@ describe.each([
     server.on(path, mockListener)
 
     await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -394,6 +410,7 @@ describe.each([
       referer: 'https://abc.com/',
     }
     await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -412,6 +429,7 @@ describe.each([
     server.on(path, mockListener)
 
     await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -453,6 +471,7 @@ describe.each([
     })
 
     const resultAll = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -467,6 +486,7 @@ describe.each([
     )
 
     const resultPart = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
@@ -485,6 +505,7 @@ describe.each([
     })
 
     const result = await runTask({
+      appName,
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: `$('#data').noFun()`,
@@ -507,6 +528,7 @@ describe.each([
 
       jest.useFakeTimers()
       await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: '',
@@ -514,6 +536,7 @@ describe.each([
       expect(jest.getTimerCount()).toBe(1)
       jest.advanceTimersByTime(CLOSE_TIMEOUT_MS - 1000)
       await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: '',
@@ -528,6 +551,7 @@ describe.each([
       jest.useRealTimers()
       await wait(1000)
       await runTask({
+        appName,
         taskId: path,
         url: `${SERVER_URL}/${path}`,
         script: '',

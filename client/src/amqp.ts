@@ -14,12 +14,14 @@ export interface Options {
   durable?: boolean
 }
 
-export interface SendData extends QueueItem {
+export interface SendData extends Omit<QueueItem, 'appName'> {
   id: string
   priority?: number
 }
 
-export interface ResultData extends QueueResult {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface ResultData<T = any> extends QueueResult {
+  data: T
   id: string
 }
 
@@ -63,7 +65,11 @@ class Amqp extends EventEmitter {
     } else {
       callbackQueue = await this.channel.assertQueue('', { exclusive: true })
     }
-    await this.channel.bindQueue(dataQueue.queue, this.param.exchange, `#.${this.param.queue}`)
+    await this.channel.bindQueue(
+      dataQueue.queue,
+      this.param.exchange,
+      `${this.param.app}.${this.param.queue}`
+    )
     this.callbackQueueName = callbackQueue.queue
     this.initialized = true
   }
@@ -75,13 +81,22 @@ class Amqp extends EventEmitter {
     if (priority < 0 || priority > 10) {
       throw new Error('priority between 0-10')
     }
-    const { exchange, app, queue } = this.param
-    await this.channel.publish(exchange, `${app}.${queue}`, Buffer.from(JSON.stringify(data)), {
-      priority,
-      persistent: true,
-      correlationId: id,
-      replyTo: this.callbackQueueName,
-    })
+    await this.channel.publish(
+      this.param.exchange,
+      `${this.param.app}.${this.param.queue}`,
+      Buffer.from(
+        JSON.stringify({
+          ...data,
+          appName: this.param.app,
+        })
+      ),
+      {
+        priority,
+        persistent: true,
+        correlationId: id,
+        replyTo: this.callbackQueueName,
+      }
+    )
   }
 
   private startMonitor(): void {

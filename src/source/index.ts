@@ -8,7 +8,7 @@ import config from '../config'
 import { ErrCode, TaskError, logPrefix, filterObject } from '../utils'
 
 const decodeData = (response: AxiosResponse, task: Task): string => {
-  const log = logPrefix(sourceLog, task.taskId)
+  const log = logPrefix(sourceLog, `[${task.appName}] [${task.taskId}]`)
   if (task.encoding) {
     log.debug('set encoding:', task.encoding)
     return iconv.decode(Buffer.from(response.data), task.encoding)
@@ -33,7 +33,7 @@ const decodeData = (response: AxiosResponse, task: Task): string => {
 
 const runTask = async (task: Task): Promise<QueueResult> => {
   const startTime = Date.now()
-  const log = logPrefix(sourceLog, task.taskId)
+  const log = logPrefix(sourceLog, `[${task.appName}] [${task.taskId}]`)
   log.info('---------- RUN TASK ----------')
   try {
     let retryRemain = config.source.retries

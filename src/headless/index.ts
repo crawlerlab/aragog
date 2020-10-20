@@ -8,6 +8,7 @@ import { ErrCode, TaskError, logPrefix, filterObject } from '../utils'
 
 let closeTimer: NodeJS.Timeout | null = null
 let globalBrowser: puppeteer.Browser | null = null
+let promiseCache: Promise<puppeteer.Browser> | null = null
 
 const JQUERY_PATH = path.resolve(__dirname, 'jquery-3.5.1.min.js')
 
@@ -16,15 +17,24 @@ const initBrowser = async (): Promise<puppeteer.Browser> => {
     clearTimeout(closeTimer)
     closeTimer = null
   }
-  if (!globalBrowser) {
+  if (!promiseCache) {
     headlessLog.info('launch browser...')
-    globalBrowser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-      headless: config.headless.headless,
-      ignoreHTTPSErrors: config.headless.ignoreHTTPSErrors,
-    })
+    promiseCache = puppeteer
+      .launch({
+        args: ['--no-sandbox'],
+        headless: config.headless.headless,
+        ignoreHTTPSErrors: config.headless.ignoreHTTPSErrors,
+      })
+      .then((browser) => {
+        globalBrowser = browser
+        return browser
+      })
+      .catch((err) => {
+        promiseCache = null
+        throw err
+      })
   }
-  return globalBrowser
+  return promiseCache
 }
 
 const idleBrowser = async (): Promise<void> => {
@@ -33,6 +43,7 @@ const idleBrowser = async (): Promise<void> => {
       if (globalBrowser) {
         headlessLog.info('close browser...')
         await globalBrowser.close()
+        promiseCache = null
         globalBrowser = null
       }
     }, config.headless.browserCloseTimeout * 1000)
@@ -40,7 +51,7 @@ const idleBrowser = async (): Promise<void> => {
 }
 
 const createPage = async (browser: puppeteer.Browser, task: Task): Promise<puppeteer.Page> => {
-  const log = logPrefix(headlessLog, task.taskId)
+  const log = logPrefix(headlessLog, `[${task.appName}] [${task.taskId}]`)
   const onRequest = (request: puppeteer.Request): void => {
     const url = request.url()
     if (task.disableImage && request.resourceType() === 'image') {
@@ -98,18 +109,10 @@ const createPage = async (browser: puppeteer.Browser, task: Task): Promise<puppe
 const runTask = async (task: Task): Promise<QueueResult> => {
   let page: puppeteer.Page | null = null
   const startTime = Date.now()
-  const log = logPrefix(headlessLog, task.taskId)
+  const log = logPrefix(headlessLog, `[${task.appName}] [${task.taskId}]`)
   log.info('---------- RUN TASK ----------')
   try {
     const browser = await initBrowser()
-    const pages = await browser.pages()
-    const pagesInfo = await Promise.all(
-      pages.map(async (pageItem) => ({
-        title: await pageItem.title(),
-        url: pageItem.url(),
-      }))
-    )
-    log.info('page opened:', pagesInfo)
 
     let retryRemain = config.headless.retries
     const loadPage = async (): Promise<[puppeteer.Page, puppeteer.Response]> => {
