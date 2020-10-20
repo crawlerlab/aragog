@@ -1,6 +1,6 @@
 {
   "name": "aragog",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Distributed web scraping framework",
   "author": "Fei Liu",
   "license": "MIT",
