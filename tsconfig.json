@@ -14,5 +14,6 @@
       "types/*": ["types/*"]
     }
   },
-  "include": ["src/**/*", "client/**/*", "types/*", "test/**/*"]
+  "include": ["src/**/*", "client/**/*", "types/*", "test/**/*"],
+  "exclude": ["client/lib/*"]
 }
