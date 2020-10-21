@@ -1,6 +1,6 @@
 {
   "name": "aragog-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Aragog web scraping framework client",
   "keywords": [
     "scraping",
@@ -28,10 +28,8 @@
     "prepublishOnly": "ls lib"
   },
   "dependencies": {
+    "@types/amqplib": "^0.5.14",
     "amqplib": "^0.6.0",
     "axios": "^0.20.0"
-  },
-  "devDependencies": {
-    "@types/amqplib": "^0.5.14"
   }
 }
