@@ -10,7 +10,7 @@ import { ErrCode, TaskError, logPrefix, filterObject } from '../utils'
 const decodeData = (response: AxiosResponse, task: Task): string => {
   const log = logPrefix(sourceLog, `[${task.appName}] [${task.taskId}]`)
   if (task.encoding) {
-    log.debug('set encoding:', task.encoding)
+    log.info('set encoding:', task.encoding)
     return iconv.decode(Buffer.from(response.data), task.encoding)
   }
   const contentType: string = response.headers['content-type']
@@ -80,6 +80,8 @@ const runTask = async (task: Task): Promise<QueueResult> => {
         log.debug('load timeout:', timeout)
         log.info('fetch html data...')
         const result = await axios(requestParams)
+        const finalURL = result.request?.res?.responseUrl
+        log.info('fetch completed url:', finalURL)
         if (!(result.status >= 200 && result.status < 300)) {
           throw new TaskError(`page status code is ${result.status}`)
         }
@@ -122,7 +124,9 @@ const runTask = async (task: Task): Promise<QueueResult> => {
       resultData.headers = filterObject(respHeaders, task.requireHeaders)
     }
 
-    const dom = cheerio.load(decodeData(response, task))
+    const domContent = decodeData(response, task)
+    log.debug('response content:\n', domContent)
+    const dom = cheerio.load(domContent)
     log.info('dom loaded')
 
     const vm = new VM({
