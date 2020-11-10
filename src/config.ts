@@ -1,4 +1,5 @@
 import path from 'path'
+import JSON5 from 'json5'
 import fse from 'fs-extra'
 import { merge } from 'lodash'
 import type { AmqpConn } from 'types/amqp'
@@ -7,7 +8,7 @@ import type { QueueParam } from './amqp'
 export const dataDir = path.resolve(__dirname, '../data')
 fse.ensureDirSync(dataDir)
 
-const CFG_FILE_PATH = path.join(dataDir, 'config.json')
+const CFG_FILE_PATH = path.join(dataDir, 'config.json5')
 
 interface LogCfg {
   maxSize: number
@@ -19,6 +20,7 @@ export interface Config {
     server: AmqpConn
     headlessQueue: QueueParam
     sourceQueue: QueueParam
+    messageTimeout: number
   }
   log: {
     debugMode: boolean
@@ -59,6 +61,7 @@ const defaultConfig: Config = {
       exchange: 'aragog_exchange',
       prefetch: 5,
     },
+    messageTimeout: 5 * 60,
   },
   log: {
     debugMode: false,
@@ -97,10 +100,10 @@ const defaultConfig: Config = {
 }
 
 if (!fse.pathExistsSync(CFG_FILE_PATH)) {
-  fse.writeJSONSync(CFG_FILE_PATH, defaultConfig, { spaces: 2 })
+  fse.writeFileSync(CFG_FILE_PATH, JSON5.stringify(defaultConfig, undefined, 2))
 }
 
-const userConfig: Config = fse.readJSONSync(CFG_FILE_PATH)
+const userConfig: Config = JSON5.parse(fse.readFileSync(CFG_FILE_PATH).toString())
 const config = merge<Config, Config>(defaultConfig, userConfig)
 
 export default config

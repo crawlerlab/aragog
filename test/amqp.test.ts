@@ -9,6 +9,25 @@ import {
   getRandomServerData,
   getRandomID,
 } from './utils/amqp'
+import { Config } from '../src/config'
+
+jest.mock('../src/config', () => {
+  const { default: actualConfig, ...otherExports } = jest.requireActual<{ default: Config }>(
+    '../src/config'
+  )
+  const cfg: Partial<Config> = {
+    ...actualConfig,
+    amqp: {
+      ...actualConfig.amqp,
+      messageTimeout: 1,
+    },
+  }
+  return {
+    __esModule: true,
+    default: cfg,
+    ...otherExports,
+  }
+})
 
 const wait = (time: number): Promise<void> => new Promise((r) => setTimeout(r, time))
 
@@ -244,6 +263,39 @@ describe('AMQP', () => {
       ...sendData,
     })
     expect(serverErrMock).toBeCalledWith(new Error('server error'))
+
+    await dispose()
+  })
+
+  it('任务超时处理', async () => {
+    const { client, server, dispose } = await getConnPair()
+
+    const clientMock = jest.fn()
+    const clientErrMock = jest.fn()
+    const serverMock = jest.fn()
+    const serverErrMock = jest.fn()
+
+    client.on('data', clientMock)
+    client.on('error', clientErrMock)
+    const sendData = getRandomClientData()
+
+    await client.sendToQueue({
+      id: 'test-id',
+      ...sendData,
+    })
+
+    serverMock.mockImplementation(() => new Promise(() => {}))
+    server.onData(serverMock, serverErrMock)
+
+    await wait(2000)
+
+    expect(clientMock).not.toHaveBeenCalled()
+    expect(clientErrMock).not.toHaveBeenCalled()
+    expect(serverMock).toBeCalledWith({
+      taskId: 'test-id',
+      ...sendData,
+    })
+    expect(serverErrMock).toBeCalledWith(new Error('timeout of 1000ms exceeded'))
 
     await dispose()
   })

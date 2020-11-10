@@ -1,5 +1,6 @@
 import amqp from 'amqplib'
 import { QueueItem, AmqpConn, QueueResult, Task } from 'types/amqp'
+import config from './config'
 import { amqpLog } from './log'
 import { logPrefix } from './utils'
 
@@ -58,10 +59,15 @@ class Amqp {
           log.info(`received:\n`, data)
           let result: QueueResult
           try {
-            result = await callback({
-              taskId: correlationId,
-              ...data,
-            })
+            result = await Promise.race([
+              callback({ taskId: correlationId, ...data }),
+              new Promise<QueueResult>((resolve, reject) => {
+                const timeout = config.amqp.messageTimeout * 1000
+                setTimeout(() => {
+                  reject(new Error(`timeout of ${timeout}ms exceeded`))
+                }, timeout)
+              }),
+            ])
           } catch (error) {
             channel.reject(msg)
             log.error(`callback execution failed:`, error)
@@ -77,6 +83,7 @@ class Amqp {
         } catch (error) {
           amqpLog.error(`[${this.param.queue}] failed to send:`, error)
           channel.reject(msg)
+          onError(error)
         }
       }
     })

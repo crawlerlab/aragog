@@ -76,70 +76,73 @@ Aragog 是一个双模式的分布式爬虫框架
 启动服务后, 如果不存在配置文件, 则会在 data 目录下生成初始配置文件
 如未指定相应配置字段, 将使用如下配置
 
-```json
+```json5
 {
-  "amqp": {
-    "server": {
+  amqp: {
+    server: {
       // RabbitMQ 服务器配置
-      "hostname": "localhost",
-      "port": 5672,
-      "username": "guest",
-      "password": "guest",
-      "vhost": "/"
+      hostname: 'localhost',
+      port: 5672,
+      username: 'guest',
+      password: 'guest',
+      vhost: '/',
     },
     // 无头浏览器模式, 任务消息队列配置
-    "headlessQueue": {
-      "queue": "headless",
-      "exchange": "aragog_exchange",
-      "prefetch": 5 // 最大并发处理数量
+    headlessQueue: {
+      queue: 'headless',
+      exchange: 'aragog_exchange',
+      prefetch: 5, // 最大并发处理数量
     },
     // HTTP请求模式, 任务消息队列配置
-    "sourceQueue": {
-      "queue": "source",
-      "exchange": "aragog_exchange",
-      "prefetch": 5
-    }
+    sourceQueue: {
+      queue: 'source',
+      exchange: 'aragog_exchange',
+      prefetch: 5,
+    },
+    // 消息处理超时时间
+    // (兜底超时, 防止任务积压, 应大于 headless/source 的 defaultLoadTimeout)
+    messageTimeout: 300,
   },
   // 服务端日志配置
-  "log": {
-    "debugMode": false, // 是否开启调试模式 (包含更多日志, 如请求信息和客户端参数等)
+  log: {
+    debugMode: false, // 是否开启调试模式 (包含更多日志, 如请求信息和客户端参数等)
     // AMQP协议日志
-    "amqp": {
-      "maxSize": 5120, // 单个日志文件大小 (MB)
-      "backups": 5 // 备份数量
+    amqp: {
+      maxSize: 5120, // 单个日志文件大小 (MB)
+      backups: 5, // 备份数量
     },
     // 错误日志
-    "error": {
-      "maxSize": 5120,
-      "backups": 5
+    error: {
+      maxSize: 5120,
+      backups: 5,
     },
     // 无头浏览器模式日志
-    "headless": {
-      "maxSize": 5120,
-      "backups": 5
+    headless: {
+      maxSize: 5120,
+      backups: 5,
     },
     // HTTP请求模式日志
-    "source": {
-      "maxSize": 5120,
-      "backups": 5
-    }
+    source: {
+      maxSize: 5120,
+      backups: 5,
+    },
   },
   // 无头浏览器模式爬虫相关配置
-  "headless": {
-    "headless": true, // 是否隐藏浏览器界面 (调试时可以选择 false, 方便查看运行过程)
-    "ignoreHTTPSErrors": false, // 是否忽略 https 证书错误
-    "browserCloseTimeout": 300, // 无任务时浏览器超时关闭时间 (单位: 秒, 无新任务时开始计时, 可清理无响应的标签)
-    "defaultLoadTimeout": 60, // 每个任务的页面加载超时时间 (单位: 秒, 加载超时, 则任务出错)
-    "retries": 2, // 加载错误重试次数 (不包含响应状态码错误)
+  headless: {
+    headless: true, // 是否隐藏浏览器界面 (调试时可以选择 false, 方便查看运行过程)
+    ignoreHTTPSErrors: false, // 是否忽略 https 证书错误
+    browserCloseTimeout: 300, // 无任务时浏览器超时关闭时间 (单位: 秒, 无新任务时开始计时, 可清理无响应的标签)
+    defaultLoadTimeout: 60, // 每个任务的页面加载超时时间 (单位: 秒, 加载超时, 则任务出错)
+    retries: 2, // 加载错误重试次数 (不包含响应状态码错误)
     // 自定义请求时的 userAgent
-    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36',
   },
   // HTTP请求模式爬虫相关配置
-  "source": {
-    "defaultLoadTimeout": 30,
-    "retries": 2,
-    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"
-  }
+  source: {
+    defaultLoadTimeout: 30,
+    retries: 2,
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36',
+  },
 }
 ```
 

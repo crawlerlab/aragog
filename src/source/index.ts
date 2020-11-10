@@ -7,6 +7,8 @@ import { sourceLog } from '../log'
 import config from '../config'
 import { ErrCode, TaskError, logPrefix, filterObject } from '../utils'
 
+const { CancelToken } = axios
+
 const decodeData = (response: AxiosResponse, task: Task): string => {
   const log = logPrefix(sourceLog, `[${task.appName}] [${task.taskId}]`)
   if (task.encoding) {
@@ -40,12 +42,15 @@ const runTask = async (task: Task): Promise<QueueResult> => {
     const fetchData = async (): Promise<AxiosResponse> => {
       try {
         const timeout = (task.timeout || config.source.defaultLoadTimeout) * 1000
+        const source = CancelToken.source()
+
         const requestParams: AxiosRequestConfig = {
           url: task.url,
           method: task.method || 'GET',
           headers: {},
           responseType: 'arraybuffer',
           validateStatus: () => true,
+          cancelToken: source.token,
           timeout,
         }
         if (config.source.userAgent) {
@@ -79,7 +84,16 @@ const runTask = async (task: Task): Promise<QueueResult> => {
         }
         log.debug('load timeout:', timeout)
         log.info('fetch html data...')
-        const result = await axios(requestParams)
+        const result = await Promise.race([
+          axios(requestParams),
+          new Promise<AxiosResponse>((resolve, reject) => {
+            // when axios timeout doesn't work
+            setTimeout(() => {
+              source.cancel()
+              reject(new Error('interrupt: connection timeout'))
+            }, timeout + 1000)
+          }),
+        ])
         const finalURL = result.request?.res?.responseUrl
         log.info('fetch completed url:', finalURL)
         if (!(result.status >= 200 && result.status < 300)) {
