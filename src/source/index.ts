@@ -101,7 +101,9 @@ const runTask = async (task: Task): Promise<QueueResult> => {
         }
         return result
       } catch (error) {
-        log.error('fetch error:', error.message)
+        if (error instanceof Error) {
+          log.error('fetch error:', error.message)
+        }
         if (retryRemain > 0 && !(error instanceof TaskError)) {
           log.info(`retrying... (${retryRemain} times left)`)
           retryRemain--
@@ -120,12 +122,14 @@ const runTask = async (task: Task): Promise<QueueResult> => {
     try {
       response = await fetchData()
     } catch (error) {
-      log.error('failed to fetch:', error.message)
+      if (error instanceof Error) {
+        log.error('failed to fetch:', error.message)
+      }
       return {
         startTime,
         endTime: Date.now(),
         errorCode: ErrCode.PageLoadError,
-        errorMsg: error.message,
+        errorMsg: error instanceof Error ? error.message : '',
       }
     }
 
@@ -133,7 +137,8 @@ const runTask = async (task: Task): Promise<QueueResult> => {
     log.debug('response headers:', respHeaders)
     if (task.requireHeaders) {
       if (respHeaders['set-cookie'] && Array.isArray(respHeaders['set-cookie'])) {
-        respHeaders['set-cookie'] = respHeaders['set-cookie'].join('; ')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        respHeaders['set-cookie'] = respHeaders['set-cookie'].join('; ') as any
       }
       resultData.headers = filterObject(respHeaders, task.requireHeaders)
     }
@@ -157,12 +162,14 @@ const runTask = async (task: Task): Promise<QueueResult> => {
       log.debug('script execution result:', data)
       resultData.data = data
     } catch (error) {
-      log.error('script execution failed:', error.message)
+      if (error instanceof Error) {
+        log.error('script execution failed:', error.message)
+      }
       return {
         startTime,
         endTime: Date.now(),
         errorCode: ErrCode.ScriptError,
-        errorMsg: error.message,
+        errorMsg: error instanceof Error ? error.message : '',
       }
     }
 
@@ -170,12 +177,14 @@ const runTask = async (task: Task): Promise<QueueResult> => {
     log.info('spend time:', resultData.endTime - startTime)
     return resultData
   } catch (error) {
-    log.error('task execution error:', error)
+    if (error instanceof Error) {
+      log.error('task execution error:', error.message)
+    }
     return {
       startTime,
       endTime: Date.now(),
       errorCode: ErrCode.SourceError,
-      errorMsg: error.message,
+      errorMsg: error instanceof Error ? error.message : '',
     }
   }
 }

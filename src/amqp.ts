@@ -71,7 +71,9 @@ class Amqp {
           } catch (error) {
             channel.reject(msg)
             log.error(`callback execution failed:`, error)
-            onError(error)
+            if (error instanceof Error) {
+              onError(error)
+            }
             return
           }
           log.info(`reply to ${replyTo}:\n`, result)
@@ -83,7 +85,9 @@ class Amqp {
         } catch (error) {
           amqpLog.error(`[${this.param.queue}] failed to send:`, error)
           channel.reject(msg)
-          onError(error)
+          if (error instanceof Error) {
+            onError(error)
+          }
         }
       }
     })

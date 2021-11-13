@@ -6,9 +6,8 @@ import HttpServer from './utils/http-server'
 import mockConfig, { Config } from '../src/config'
 
 jest.mock('../src/config', () => {
-  const { default: actualConfig, ...otherExports } = jest.requireActual<{ default: Config }>(
-    '../src/config'
-  )
+  const { default: actualConfig, ...otherExports } =
+    jest.requireActual<{ default: Config }>('../src/config')
   const cfg: Partial<Config> = {
     ...actualConfig,
     headless: {
@@ -490,10 +489,9 @@ describe.each([
       taskId: path,
       url: `${SERVER_URL}/${path}`,
       script: '',
-      requireHeaders: ['set-cookie', 'Cache-Control'],
+      requireHeaders: ['Cache-Control'],
     })
     expect(resultPart.headers).toEqual({
-      'set-cookie': 'name=value; path=/',
       'cache-control': 'public, max-age=2592000',
     })
   })

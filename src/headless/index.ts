@@ -52,7 +52,7 @@ const idleBrowser = async (): Promise<void> => {
 
 const createPage = async (browser: puppeteer.Browser, task: Task): Promise<puppeteer.Page> => {
   const log = logPrefix(headlessLog, `[${task.appName}] [${task.taskId}]`)
-  const onRequest = (request: puppeteer.Request): void => {
+  const onRequest = (request: puppeteer.HTTPRequest): void => {
     const url = request.url()
     if (task.disableImage && request.resourceType() === 'image') {
       log.debug('request [blocked]:', url)
@@ -68,7 +68,7 @@ const createPage = async (browser: puppeteer.Browser, task: Task): Promise<puppe
       ...request.headers(),
       ...task.headers,
     }
-    const requestParam: puppeteer.Overrides = {
+    const requestParam: puppeteer.ContinueRequestOverrides = {
       headers,
     }
     if (task.method) {
@@ -115,10 +115,10 @@ const runTask = async (task: Task): Promise<QueueResult> => {
     const browser = await initBrowser()
 
     let retryRemain = config.headless.retries
-    const loadPage = async (): Promise<[puppeteer.Page, puppeteer.Response]> => {
+    const loadPage = async (): Promise<[puppeteer.Page, puppeteer.HTTPResponse]> => {
       log.info('create new page...')
       const newPage = await createPage(browser, task)
-      let response: puppeteer.Response | null
+      let response: puppeteer.HTTPResponse | null
       try {
         const url = task.params ? `${task.url}?${querystring.stringify(task.params)}` : task.url
         log.info('loading page...')
@@ -135,7 +135,9 @@ const runTask = async (task: Task): Promise<QueueResult> => {
           throw new TaskError(`page status code is ${response.status()}`)
         }
       } catch (error) {
-        log.error('load page error:', error.message)
+        if (error instanceof Error) {
+          log.error('load page error:', error.message)
+        }
         await newPage.close()
         log.info('page closed')
         if (retryRemain > 0 && !(error instanceof TaskError)) {
@@ -148,17 +150,19 @@ const runTask = async (task: Task): Promise<QueueResult> => {
       return [newPage, response]
     }
 
-    let response: puppeteer.Response
+    let response: puppeteer.HTTPResponse
     try {
       ;[page, response] = await loadPage()
       log.info('page loaded')
     } catch (error) {
-      log.error('page loading failed:', error.message)
+      if (error instanceof Error) {
+        log.error('page loading failed:', error.message)
+      }
       return {
         startTime,
         endTime: Date.now(),
         errorCode: ErrCode.PageLoadError,
-        errorMsg: error.message,
+        errorMsg: error instanceof Error ? error.message : '',
       }
     }
 
@@ -186,12 +190,14 @@ const runTask = async (task: Task): Promise<QueueResult> => {
       log.debug('script execution result:', data)
       resultData.data = data
     } catch (error) {
-      log.error('script execution failed:', error.message)
+      if (error instanceof Error) {
+        log.error('script execution failed:', error.message)
+      }
       return {
         startTime,
         endTime: Date.now(),
         errorCode: ErrCode.ScriptError,
-        errorMsg: error.message,
+        errorMsg: error instanceof Error ? error.message : '',
       }
     }
 
@@ -204,7 +210,7 @@ const runTask = async (task: Task): Promise<QueueResult> => {
       startTime,
       endTime: Date.now(),
       errorCode: ErrCode.HeadlessError,
-      errorMsg: error.message,
+      errorMsg: error instanceof Error ? error.message : '',
     }
   } finally {
     if (page) {

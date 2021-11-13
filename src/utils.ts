@@ -105,9 +105,13 @@ export const checkTaskInput = (data: Task): void => {
 
 export const logPrefix = (logger: Logger, tag: string): Logger =>
   new Proxy(logger, {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    get: (obj, prop: 'debug' | 'info' | 'warn' | 'error') => (...args: any[]): void =>
-      obj[prop](tag, ...args),
+    get:
+      (obj, prop: 'debug' | 'info' | 'warn' | 'error') =>
+      (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...args: any[]
+      ): void =>
+        obj[prop](tag, ...args),
   })
 
 export const filterObject = (

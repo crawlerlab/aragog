@@ -12,9 +12,8 @@ import {
 import { Config } from '../src/config'
 
 jest.mock('../src/config', () => {
-  const { default: actualConfig, ...otherExports } = jest.requireActual<{ default: Config }>(
-    '../src/config'
-  )
+  const { default: actualConfig, ...otherExports } =
+    jest.requireActual<{ default: Config }>('../src/config')
   const cfg: Partial<Config> = {
     ...actualConfig,
     amqp: {

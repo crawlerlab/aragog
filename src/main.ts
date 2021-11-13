@@ -18,7 +18,7 @@ const main = async (): Promise<void> => {
       } catch (error) {
         return {
           errorCode: ErrCode.InvalidParams,
-          errorMsg: error.message,
+          errorMsg: error instanceof Error ? error.message : '',
           startTime: Date.now(),
           endTime: Date.now(),
         }
@@ -37,7 +37,7 @@ const main = async (): Promise<void> => {
       } catch (error) {
         return {
           errorCode: ErrCode.InvalidParams,
-          errorMsg: error.message,
+          errorMsg: error instanceof Error ? error.message : '',
           startTime: Date.now(),
           endTime: Date.now(),
         }
