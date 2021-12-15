@@ -1,6 +1,6 @@
 # Aragog
 
-[![Build Status](https://img.shields.io/travis/crawlerlab/aragog/master?style=flat-square)](https://travis-ci.com/crawlerlab/aragog)
+[![Build Status](https://img.shields.io/travis/com/crawlerlab/aragog/master?style=flat-square)](https://app.travis-ci.com/github/crawlerlab/aragog)
 [![Codecov Coverage](https://img.shields.io/codecov/c/github/crawlerlab/aragog/master?style=flat-square)](https://codecov.io/gh/crawlerlab/aragog)
 [![NPM Version](https://img.shields.io/npm/v/aragog-client?style=flat-square)](https://www.npmjs.com/package/aragog-client)
 [![License](https://img.shields.io/github/license/crawlerlab/aragog?style=flat-square)](https://github.com/crawlerlab/aragog/blob/master/LICENSE)
