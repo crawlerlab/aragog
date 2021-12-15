@@ -30,6 +30,6 @@
   "dependencies": {
     "@types/amqplib": "^0.5.14",
     "amqplib": "^0.6.0",
-    "axios": "^0.20.0"
+    "axios": "^0.21.2"
   }
 }
